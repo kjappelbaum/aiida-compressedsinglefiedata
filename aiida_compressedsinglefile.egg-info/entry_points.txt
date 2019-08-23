@@ -1,3 +1,2 @@
 [aiida.data]
 compressedsinglefile = aiida_compressedsinglefile.compressedsinglefile.compressedsinglefile:CompressedSinglefileData
-

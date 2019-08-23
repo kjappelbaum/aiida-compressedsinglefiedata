@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 For pytest
 initialise a test database and profile
@@ -32,15 +33,15 @@ def aiida_profile():
 
 
 @pytest.fixture(scope='module')
-def imp(aiida_profile):
-
+def imp(aiida_profile):  # pylint:disable=unused-argument, redefined-outer-name
+    """do some imports"""
     from aiida.orm import load_node
 
     return load_node
 
 
 @pytest.fixture(scope='function')
-def clear_database(aiida_profile):
+def clear_database(aiida_profile):  # pylint:disable=unused-argument, redefined-outer-name
     """clear the database after each test"""
     yield
     aiida_profile.reset_db()
