@@ -19,8 +19,6 @@ env:
     TEST_TYPE: tests
   - TEST_AIIDA_BACKEND: sqlalchemy
     TEST_TYPE: tests
-  - TEST_AIIDA_BACKEND: django
-    TEST_TYPE: pre-commit
 
 before_install:
   # Upgrade pip setuptools and wheel
@@ -34,7 +32,6 @@ install:
 
 script:
   - if [ "$TEST_TYPE" == "tests" ] ; then py.test --cov aiida-compressedsinglefile --cov-append . ; fi  # runs unit tests
-  - if [ "$TEST_TYPE" == "pre-commit" ] ; then pre-commit install; pre-commit run --all-files || ( git status --short; git diff ; exit 1 ); fi
 
 after_success:
   - coveralls
