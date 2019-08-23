@@ -1,22 +1,28 @@
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
+"""CompressedSinglefileData for AiiDA"""
+from __future__ import absolute_import
 import os
-import six
-import zipfile
-from io import BytesIO
-import shutil
-import tempfile
 from pathlib import Path
+import zipfile
 from aiida.common import exceptions
-from aiida.orm.data import Data
+from aiida.orm import Data
 
-__all__ = ('CompressedSinglefileData', )
+__all__ = ('CompressedSinglefileData',)
 
 
 class CompressedSinglefileData(Data):
     """Data class that can be used to store a single file compressed in its repository.
-    For reading, it creates a temporary file
+    It is not intended to be used with filelike
     """
 
-    DEFAULT_FILENAME = 'file.txt'
+    DEFAULT_FILENAME = 'file.zip'
 
     def __init__(self, file, **kwargs):
         """Construct a new instance and set the contents to that of the file.
@@ -35,10 +41,9 @@ class CompressedSinglefileData(Data):
         """
         return self.get_attribute('filename')
 
-    def open(self, key=None, mode='r'):
+    def open(self, key=None):
         """Return an open file handle to the content of this data node.
         :param key: optional key within the repository, by default is the `filename` set in the attributes
-        :param mode: the mode with which to open the file handle (default: read mode)
         :return: a file handle
         """
 
@@ -51,14 +56,15 @@ class CompressedSinglefileData(Data):
         """Return the content of the single file stored for this data node.
         :return: the content of the file as a string
         """
-        with self.open() as handle:
+        with self.open() as handle:  # pylint:disable=no-value-for-parameter
             return handle.read()
 
     def _compress(self, file, key):
+        """compresses a file and changes the key to *.zip extension"""
         with zipfile.ZipFile(file, 'w') as zip_file:
             zip_file.write(file, compress_type=zipfile.ZIP_DEFLATED)
         self._oldkey = key
-        key = "".join([Path(self._oldkey).stem, '.zip'])
+        key = ''.join([Path(self._oldkey).stem, '.zip'])
         return key
 
     def set_file(self, file):
@@ -77,9 +83,7 @@ class CompressedSinglefileData(Data):
             raise ValueError('path `{}` is not absolute'.format(file))
 
         if not os.path.isfile(file):
-            raise ValueError(
-                'path `{}` does not correspond to an existing file'.format(
-                    file))
+            raise ValueError('path `{}` does not correspond to an existing file'.format(file))
 
         key = self._compress(file, key)
 
@@ -106,12 +110,11 @@ class CompressedSinglefileData(Data):
         try:
             filename = self.filename
         except AttributeError:
-            raise exceptions.ValidationError(
-                'the `filename` attribute is not set.')
+            raise exceptions.ValidationError('the `filename` attribute is not set.')
 
         objects = self.list_object_names()
 
         if [filename] != objects:
             raise exceptions.ValidationError(
-                'respository files {} do not match the `filename` attribute {}.'
-                .format(objects, filename))
+                'respository files {} do not match the `filename` attribute {}.'.format(objects, filename)
+            )

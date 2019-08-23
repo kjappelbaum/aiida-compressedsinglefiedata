@@ -1,0 +1,12 @@
+README.md
+setup.py
+aiida_compressedsinglefile.egg-info/PKG-INFO
+aiida_compressedsinglefile.egg-info/SOURCES.txt
+aiida_compressedsinglefile.egg-info/dependency_links.txt
+aiida_compressedsinglefile.egg-info/entry_points.txt
+aiida_compressedsinglefile.egg-info/requires.txt
+aiida_compressedsinglefile.egg-info/top_level.txt
+compressedsinglefile/__init__.py
+compressedsinglefile/compressedsinglefile.py
+tests/__init__.py
+tests/test_compressedsinglefile.py
