@@ -1,0 +1,44 @@
+language: python
+python:
+- "3.6"
+- "2.7"
+
+services:
+  - postgresql
+  - rabbitmq
+
+addons:
+  postgresql: "10"
+
+env:
+  global:
+  - AIIDA_VERSION: develop
+  - AIIDA_DEVELOP_GIT_HASH: 409a90d7c8ac8f26792c0f0fbc1f8567f2feb89a
+  # add network executable to PATH
+  #- PATH=${PATH}:${TRAVIS_BUILD_DIR}
+  # use 'network' script from .ci
+  - PATH=${PATH}:${TRAVIS_BUILD_DIR}/.ci
+  matrix:
+  - TEST_AIIDA_BACKEND: django
+    TEST_TYPE: tests
+  - TEST_AIIDA_BACKEND: sqlalchemy
+    TEST_TYPE: tests
+  - TEST_AIIDA_BACKEND: django
+    TEST_TYPE: pre-commit
+
+before_install:
+  # Upgrade pip setuptools and wheel
+  - pip install -U wheel setuptools coveralls
+  - pip install pip==18.1
+
+install:
+- if [ "$AIIDA_VERSION" == "develop" ]; then .ci/install_aiida_github.sh ; fi  # installs develop branch
+- pip install -e .[testing,pre-commit]
+- reentry scan -r aiida
+
+script:
+  - if [ "$TEST_TYPE" == "tests" ] ; then py.test --cov aiida-compressedsinglefile --cov-append . ; fi  # runs unit tests
+  - if [ "$TEST_TYPE" == "pre-commit" ] ; then pre-commit install; pre-commit run --all-files || ( git status --short; git diff ; exit 1 ); fi
+
+after_success:
+  - coveralls
