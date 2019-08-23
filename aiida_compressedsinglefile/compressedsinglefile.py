@@ -1,16 +1,10 @@
-###########################################################################
-# Copyright (c), The AiiDA team. All rights reserved.                     #
-# This file is part of the AiiDA code.                                    #
-#                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
-# For further information on the license, see the LICENSE.txt file        #
-# For further information please visit http://www.aiida.net               #
-###########################################################################
 """CompressedSinglefileData for AiiDA"""
 from __future__ import absolute_import
 import os
 from pathlib import Path
 import zipfile
+import tempfile
+import io
 from aiida.common import exceptions
 from aiida.orm import Data
 
@@ -24,15 +18,16 @@ class CompressedSinglefileData(Data):
 
     DEFAULT_FILENAME = 'file.zip'
 
-    def __init__(self, file, **kwargs):
+    def __init__(self, filepath, **kwargs):
         """Construct a new instance and set the contents to that of the file.
-        :param file: an absolute filepath or filelike object whose contents to copy
+        :param filepath: an absolute filepath
         """
         # pylint: disable=redefined-builtin
         super(CompressedSinglefileData, self).__init__(**kwargs)
-        if file is not None:
-            self.set_file(file)
-        self._oldkey = DEFAULT_FILENAME
+        if filepath is not None:
+            self.set_file(filepath)
+        self._oldkey = Path(filepath).name
+        self._folder = self._repository._get_base_folder()
 
     @property
     def filename(self):
@@ -49,44 +44,46 @@ class CompressedSinglefileData(Data):
 
         if key is None:
             key = self.filename
-        archive = zipfile.ZipFile(key, 'r')
-        return archive
+
+        archive = zipfile.ZipFile(os.path.join(self._folder.abspath, key), 'r')
+        handle = archive.read(self._oldkey)
+        return io.BytesIO(handle)
 
     def get_content(self):
         """Return the content of the single file stored for this data node.
         :return: the content of the file as a string
         """
         with self.open() as handle:  # pylint:disable=no-value-for-parameter
-            return handle.read()
+            return handle.read().decode('UTF-8')
 
     def _compress(self, file, key):
         """compresses a file and changes the key to *.zip extension"""
-        with zipfile.ZipFile(file, 'w') as zip_file:
-            zip_file.write(file, compress_type=zipfile.ZIP_DEFLATED)
+
         self._oldkey = key
         key = ''.join([Path(self._oldkey).stem, '.zip'])
+        self._tempfile = tempfile.NamedTemporaryFile(mode='w')
+        with zipfile.ZipFile(self._tempfile.name, 'w') as zip_file:
+            zip_file.write(file, self._oldkey)
         return key
 
-    def set_file(self, file):
+    def set_file(self, filepath):
         """Store the content of the file in the node's repository, deleting any other existing objects.
-        :param file: an absolute filepath or filelike object whose contents to copy
-            Hint: Pass io.StringIO("my string") to construct the file directly from a string.
+        :param filepath: an absolute filepath
         """
         # pylint: disable=redefined-builtin
 
         try:
-            key = os.path.basename(file.name)
+            key = Path(filepath).name
         except AttributeError:
             key = self.DEFAULT_FILENAME
 
-        if not os.path.isabs(file):
+        if not os.path.isabs(filepath):
             raise ValueError('path `{}` is not absolute'.format(file))
 
-        if not os.path.isfile(file):
+        if not os.path.isfile(filepath):
             raise ValueError('path `{}` does not correspond to an existing file'.format(file))
 
-        key = self._compress(file, key)
-
+        key = self._compress(filepath, key)
         existing_object_names = self.list_object_names()
 
         try:
@@ -94,8 +91,8 @@ class CompressedSinglefileData(Data):
             existing_object_names.remove(key)
         except ValueError:
             pass
-
-        self.put_object_from_file(file, key)
+        self._folder = self._repository._get_base_folder()
+        self._folder.insert_path(self._tempfile.name, key)
 
         # Delete any other existing objects (minus the current `key` which was already removed from the list)
         for existing_key in existing_object_names:

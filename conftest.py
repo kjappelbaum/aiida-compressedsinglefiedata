@@ -31,6 +31,14 @@ def aiida_profile():
         yield fixture_mgr
 
 
+@pytest.fixture(scope='module')
+def imp(aiida_profile):
+
+    from aiida.orm import load_node
+
+    return load_node
+
+
 @pytest.fixture(scope='function')
 def clear_database(aiida_profile):
     """clear the database after each test"""
