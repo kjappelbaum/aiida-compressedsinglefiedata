@@ -8,7 +8,7 @@ import os
 import tempfile
 
 from aiida.orm import load_node
-from aiida_compressedsinglefile.tests import PluginTestCase
+from aiida.manage.fixtures import PluginTestCase
 from aiida_compressedsinglefile import CompressedSinglefileData
 
 
