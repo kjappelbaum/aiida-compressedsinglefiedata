@@ -27,7 +27,6 @@ class CompressedSinglefileData(Data):
         if filepath is not None:
             self.set_file(filepath)
         self._oldkey = Path(filepath).name
-        self._folder = self._repository._get_base_folder()
 
     @property
     def filename(self):
@@ -36,7 +35,7 @@ class CompressedSinglefileData(Data):
         """
         return self.get_attribute('filename')
 
-    def open(self, key=None):
+    def open(self, key=None):  # pylint: disable=arguments-differ
         """Return an open file handle to the content of this data node.
         :param key: optional key within the repository, by default is the `filename` set in the attributes
         :return: a file handle
@@ -45,6 +44,7 @@ class CompressedSinglefileData(Data):
         if key is None:
             key = self.filename
 
+        self._folder = self._repository._get_base_folder()  # pylint:disable=protected-access, attribute-defined-outside-init
         archive = zipfile.ZipFile(os.path.join(self._folder.abspath, key), 'r')
         handle = archive.read(self._oldkey)
         return io.BytesIO(handle)
@@ -61,7 +61,7 @@ class CompressedSinglefileData(Data):
 
         self._oldkey = key
         key = ''.join([Path(self._oldkey).stem, '.zip'])
-        self._tempfile = tempfile.NamedTemporaryFile(mode='w')
+        self._tempfile = tempfile.NamedTemporaryFile(mode='w')  # pylint:disable=attribute-defined-outside-init
         with zipfile.ZipFile(self._tempfile.name, 'w') as zip_file:
             zip_file.write(file, self._oldkey)
         return key
@@ -78,10 +78,10 @@ class CompressedSinglefileData(Data):
             key = self.DEFAULT_FILENAME
 
         if not os.path.isabs(filepath):
-            raise ValueError('path `{}` is not absolute'.format(file))
+            raise ValueError('path `{}` is not absolute'.format(filepath))
 
         if not os.path.isfile(filepath):
-            raise ValueError('path `{}` does not correspond to an existing file'.format(file))
+            raise ValueError('path `{}` does not correspond to an existing file'.format(filepath))
 
         key = self._compress(filepath, key)
         existing_object_names = self.list_object_names()
@@ -91,8 +91,8 @@ class CompressedSinglefileData(Data):
             existing_object_names.remove(key)
         except ValueError:
             pass
-        self._folder = self._repository._get_base_folder()
-        self._folder.insert_path(self._tempfile.name, key)
+        self._folder = self._repository._get_base_folder()  # pylint:disable=protected-access
+        self._folder.insert_path(self._tempfile.name, key)  # pylint:disable=protected-access
 
         # Delete any other existing objects (minus the current `key` which was already removed from the list)
         for existing_key in existing_object_names:
